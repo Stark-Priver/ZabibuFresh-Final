@@ -282,7 +282,7 @@ export const getProducts = async (sellerId = null) => {
       .select(
         `
         *,
-        profiles:seller_id (
+        profiles!products_seller_id_fkey (
           full_name,
           phone
         )

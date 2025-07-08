@@ -1,18 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  TouchableOpacity, 
-  ActivityIndicator, 
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
   Alert,
-  RefreshControl 
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '../../contexts/AuthContext';
-import { getConversations } from '../../services/supabase';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+  RefreshControl,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "../../contexts/AuthContext";
+import { getConversations } from "../../services/supabase";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 
 const ChatScreen = () => {
   const { profile } = useAuth();
@@ -31,27 +31,33 @@ const ChatScreen = () => {
 
       // Group messages by conversation (unique combination of users and product)
       const conversationMap = new Map();
-      
+
       for (const message of messages || []) {
         if (!message.products) continue;
-        
-        const otherUserId = message.sender_id === profile.id ? message.receiver_id : message.sender_id;
+
+        const otherUserId =
+          message.sender_id === profile.id
+            ? message.receiver_id
+            : message.sender_id;
         const conversationKey = `${otherUserId}_${message.product_id}`;
-        
+
         if (!conversationMap.has(conversationKey)) {
-          const otherUser = message.sender_id === profile.id ? message.receiver : message.sender;
-          
+          const otherUser =
+            message.sender_id === profile.id
+              ? message.receiver
+              : message.sender;
+
           conversationMap.set(conversationKey, {
             id: conversationKey,
             otherUser: {
               id: otherUser.id,
               fullName: otherUser.full_name,
-              phone: otherUser.phone
+              phone: otherUser.phone,
             },
             product: {
               id: message.products.id,
               title: message.products.title,
-              sellerId: message.products.seller_id
+              sellerId: message.products.seller_id,
             },
             lastMessage: message.content,
             lastMessageTime: message.created_at,
@@ -63,7 +69,7 @@ const ChatScreen = () => {
       setConversations(Array.from(conversationMap.values()));
     } catch (error) {
       console.error("Error fetching conversations:", error);
-      Alert.alert('Error', 'Could not fetch conversations: ' + error.message);
+      Alert.alert("Error", "Could not fetch conversations: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -80,19 +86,27 @@ const ChatScreen = () => {
   useEffect(() => {
     // Handle navigation from product screen to start new chat
     const { productId, sellerId, productTitle, receiverName } = params;
-    if (productId && sellerId && profile && sellerId !== profile.id) {
+    if (
+      productId &&
+      sellerId &&
+      profile &&
+      sellerId !== profile.id &&
+      !loading
+    ) {
+      // Clear the params to avoid infinite loops
+      router.setParams({});
       router.push({
         pathname: `/(app)/chat/[chatId]`,
         params: {
           chatId: `${sellerId}_${productId}`,
           receiverId: sellerId,
           productId: productId,
-          productTitle: productTitle || 'Product',
-          receiverName: receiverName || 'Seller'
-        }
+          productTitle: productTitle || "Product",
+          receiverName: receiverName || "Seller",
+        },
       });
     }
-  }, [params, profile]);
+  }, [params, profile, loading]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -101,43 +115,59 @@ const ChatScreen = () => {
   };
 
   const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffInHours = (now - date) / (1000 * 60 * 60);
-    
-    if (diffInHours < 24) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffInHours < 48) {
-      return 'Yesterday';
-    } else {
-      return date.toLocaleDateString();
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return "Now";
+      }
+
+      const now = new Date();
+      const diffInHours = (now - date) / (1000 * 60 * 60);
+
+      if (diffInHours < 24) {
+        return date.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      } else if (diffInHours < 48) {
+        return "Yesterday";
+      } else {
+        return date.toLocaleDateString();
+      }
+    } catch (error) {
+      return "Now";
     }
   };
 
   const renderConversationItem = ({ item }) => (
     <TouchableOpacity
       style={styles.conversationItem}
-      onPress={() => router.push({
-        pathname: `/(app)/chat/[chatId]`,
-        params: {
-          chatId: item.id,
-          receiverId: item.otherUser.id,
-          receiverName: item.otherUser.fullName,
-          productId: item.product.id,
-          productTitle: item.product.title
-        }
-      })}
+      onPress={() =>
+        router.push({
+          pathname: `/(app)/chat/[chatId]`,
+          params: {
+            chatId: item.id,
+            receiverId: item.otherUser.id,
+            receiverName: item.otherUser.fullName,
+            productId: item.product.id,
+            productTitle: item.product.title,
+          },
+        })
+      }
     >
       <View style={styles.avatarContainer}>
         <Text style={styles.avatarText}>
-          {item.otherUser.fullName?.charAt(0).toUpperCase() || 'U'}
+          {item.otherUser.fullName?.charAt(0).toUpperCase() || "U"}
         </Text>
       </View>
-      
+
       <View style={styles.conversationDetails}>
         <View style={styles.conversationHeader}>
           <Text style={styles.partnerName}>{item.otherUser.fullName}</Text>
-          <Text style={styles.timestamp}>{formatTime(item.lastMessageTime)}</Text>
+          <Text style={styles.timestamp}>
+            {formatTime(item.lastMessageTime)}
+          </Text>
         </View>
         <Text style={styles.productTitle} numberOfLines={1}>
           📦 {item.product.title}
@@ -146,7 +176,7 @@ const ChatScreen = () => {
           {item.lastMessage}
         </Text>
       </View>
-      
+
       <Ionicons name="chevron-forward" size={20} color="#ccc" />
     </TouchableOpacity>
   );
@@ -156,15 +186,14 @@ const ChatScreen = () => {
       <Ionicons name="chatbubbles-outline" size={80} color="#ccc" />
       <Text style={styles.emptyTitle}>No Conversations Yet</Text>
       <Text style={styles.emptyText}>
-        {profile?.role === 'buyer' 
+        {profile?.role === "buyer"
           ? "Start browsing products and contact sellers to begin conversations."
-          : "Buyers will contact you about your products. Your conversations will appear here."
-        }
+          : "Buyers will contact you about your products. Your conversations will appear here."}
       </Text>
-      {profile?.role === 'buyer' && (
-        <TouchableOpacity 
-          style={styles.browseButton} 
-          onPress={() => router.push('/(app)/(tabs)/products')}
+      {profile?.role === "buyer" && (
+        <TouchableOpacity
+          style={styles.browseButton}
+          onPress={() => router.push("/(app)/(tabs)/products")}
         >
           <Ionicons name="search" size={16} color="#fff" />
           <Text style={styles.browseButtonText}>Browse Products</Text>
@@ -188,7 +217,8 @@ const ChatScreen = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
         <Text style={styles.headerSubtitle}>
-          {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
+          {conversations.length} conversation
+          {conversations.length !== 1 ? "s" : ""}
         </Text>
       </View>
 
@@ -198,7 +228,9 @@ const ChatScreen = () => {
         renderItem={renderConversationItem}
         keyExtractor={(item) => item.id}
         style={styles.list}
-        contentContainerStyle={conversations.length === 0 ? styles.emptyListContainer : null}
+        contentContainerStyle={
+          conversations.length === 0 ? styles.emptyListContainer : null
+        }
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -212,33 +244,33 @@ const ChatScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: "#f8f9fa",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   header: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingHorizontal: 20,
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: "#e0e0e0",
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   headerSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
     marginTop: 2,
   },
   list: {
@@ -248,87 +280,87 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   conversationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: "#f0f0f0",
   },
   avatarContainer: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#6200ee',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#6200ee",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 15,
   },
   avatarText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   conversationDetails: {
     flex: 1,
   },
   conversationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 2,
   },
   partnerName: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   timestamp: {
     fontSize: 12,
-    color: '#999',
+    color: "#999",
   },
   productTitle: {
     fontSize: 13,
-    color: '#6200ee',
+    color: "#6200ee",
     marginBottom: 2,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   lastMessage: {
     fontSize: 14,
-    color: '#666',
+    color: "#666",
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingHorizontal: 40,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     marginTop: 20,
     marginBottom: 10,
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
     lineHeight: 22,
     marginBottom: 30,
   },
   browseButton: {
-    backgroundColor: '#6200ee',
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: "#6200ee",
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
   },
   browseButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
     marginLeft: 8,
   },
 });
