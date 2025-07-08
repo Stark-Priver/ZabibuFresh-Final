@@ -4,24 +4,22 @@
     "slug": "zabibufreshapp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
     "assetBundlePatterns": ["**/*"],
+    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.zabibufresh.app"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#6200ee"
-      },
       "package": "com.zabibufresh.app",
       "permissions": ["android.permission.RECORD_AUDIO"]
     },
     "web": {
-      "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
     },
     "scheme": "zabibufreshapp",
     "plugins": [
@@ -29,11 +27,14 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Zabibu Fresh needs access to your photos to let you share product images.",
-          "cameraPermission": "Zabibu Fresh needs access to your camera to let you take product photos."
+          "photosPermission": "Zabibu Fresh needs access to your photos.",
+          "cameraPermission": "Zabibu Fresh needs access to your camera."
         }
       ]
     ],
+    "experiments": {
+      "typedRoutes": true
+    },
     "extra": {
       "router": {
         "origin": false

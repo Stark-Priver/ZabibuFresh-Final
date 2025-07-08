@@ -76,3 +76,12 @@ export const generateImageFileName = (userId, originalName = 'image') => {
   const extension = originalName.split('.').pop() || 'jpg';
   return `${userId}_${timestamp}.${extension}`;
 };
+
+// Default export to fix the missing default export error
+const StorageService = {
+  uploadImage,
+  deleteImage,
+  generateImageFileName
+};
+
+export default StorageService;
